@@ -4,10 +4,66 @@
 namespace nctl {
 
 ///////////////////////////////////////////////////////////
+// AtomicFence
+///////////////////////////////////////////////////////////
+
+void Atomic::threadFence(MemoryModel memModel)
+{
+	switch (memModel)
+	{
+		case MemoryModel::RELAXED:
+			__atomic_thread_fence(__ATOMIC_RELAXED);
+			break;
+		case MemoryModel::ACQUIRE:
+			__atomic_thread_fence(__ATOMIC_ACQUIRE);
+			break;
+		case MemoryModel::RELEASE:
+			FATAL_MSG("Incompatible memory model");
+			break;
+		case MemoryModel::SEQ_CST:
+		default:
+			__atomic_thread_fence(__ATOMIC_SEQ_CST);
+			break;
+	}
+}
+
+void Atomic::signalFence(MemoryModel memModel)
+{
+	switch (memModel)
+	{
+		case MemoryModel::RELAXED:
+			__atomic_signal_fence(__ATOMIC_RELAXED);
+			break;
+		case MemoryModel::ACQUIRE:
+			__atomic_signal_fence(__ATOMIC_ACQUIRE);
+			break;
+		case MemoryModel::RELEASE:
+			FATAL_MSG("Incompatible memory model");
+			break;
+		case MemoryModel::SEQ_CST:
+		default:
+			__atomic_signal_fence(__ATOMIC_SEQ_CST);
+			break;
+	}
+}
+
+/*
+bool Atomic::alwaysLockFree(unsigned long int size, void *ptr)
+{
+	return __atomic_always_lock_free(size, ptr);
+}
+
+bool Atomic::isLockFree(unsigned long int size, const void *ptr)
+{
+	return __atomic_is_lock_free(size, ptr);
+}
+*/
+
+///////////////////////////////////////////////////////////
 // Atomic32
 ///////////////////////////////////////////////////////////
 
-int32_t Atomic32::load(MemoryModel memModel)
+int32_t Atomic32::load(MemoryModel memModel) const
 {
 	switch (memModel)
 	{
@@ -99,7 +155,7 @@ bool Atomic32::cmpExchange(int32_t newValue, int32_t cmpValue, MemoryModel memMo
 // Atomic64
 ///////////////////////////////////////////////////////////
 
-int64_t Atomic64::load(MemoryModel memModel)
+int64_t Atomic64::load(MemoryModel memModel) const
 {
 	switch (memModel)
 	{

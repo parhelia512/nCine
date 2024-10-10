@@ -4,10 +4,46 @@
 namespace nctl {
 
 ///////////////////////////////////////////////////////////
+// Atomic
+///////////////////////////////////////////////////////////
+
+void Atomic::threadFence(MemoryModel memModel)
+{
+	switch (memModel)
+	{
+		case MemoryModel::RELAXED:
+			return std::atomic_thread_fence(std::memory_order_relaxed);
+		case MemoryModel::RELEASE:
+			return std::atomic_thread_fence(std::memory_order_release);
+		case MemoryModel::ACQUIRE:
+			return std::atomic_thread_fence(std::memory_order_acquire);
+		case MemoryModel::SEQ_CST:
+		default:
+			return std::atomic_thread_fence(std::memory_order_seq_cst);
+	}
+}
+
+void Atomic::signalFence(MemoryModel memModel)
+{
+	switch (memModel)
+	{
+		case MemoryModel::RELAXED:
+			return std::atomic_signal_fence(std::memory_order_relaxed);
+		case MemoryModel::RELEASE:
+			return std::atomic_signal_fence(std::memory_order_release);
+		case MemoryModel::ACQUIRE:
+			return std::atomic_signal_fence(std::memory_order_acquire);
+		case MemoryModel::SEQ_CST:
+		default:
+			return std::atomic_signal_fence(std::memory_order_seq_cst);
+	}
+}
+
+///////////////////////////////////////////////////////////
 // Atomic32
 ///////////////////////////////////////////////////////////
 
-int32_t Atomic32::load(MemoryModel memModel)
+int32_t Atomic32::load(MemoryModel memModel) const
 {
 	switch (memModel)
 	{
@@ -96,7 +132,7 @@ bool Atomic32::cmpExchange(int32_t newValue, int32_t cmpValue, MemoryModel memMo
 // Atomic64
 ///////////////////////////////////////////////////////////
 
-int64_t Atomic64::load(MemoryModel memModel)
+int64_t Atomic64::load(MemoryModel memModel) const
 {
 	switch (memModel)
 	{

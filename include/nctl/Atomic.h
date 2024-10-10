@@ -2,7 +2,7 @@
 #define NCTL_ATOMIC
 
 #include <cstdint>
-#include <ncine/common_macros.h>
+#include <ncine/common_defines.h>
 
 #if defined(__APPLE__)
 	#include <atomic>
@@ -10,26 +10,41 @@
 
 namespace nctl {
 
+enum class MemoryModel
+{
+	RELAXED,
+	ACQUIRE,
+	RELEASE,
+	SEQ_CST
+};
+
+/// Atomic memory and compiler fences
+class DLL_PUBLIC Atomic // TODO: add unit tests
+{
+  public:
+	static void threadFence(MemoryModel memModel);
+	static inline void threadFence() { threadFence(MemoryModel::SEQ_CST); }
+
+	static void signalFence(MemoryModel memModel);
+	static inline void signalFence() { threadFence(MemoryModel::SEQ_CST); }
+
+	// TODO: Make it work or delete them (also from platform specific implementations)
+	//static bool alwaysLockFree(unsigned long int size, void *ptr);
+	//static bool isLockFree(unsigned long int size, const void *ptr);
+};
+
 /// An atomic `int32_t` class
 class DLL_PUBLIC Atomic32
 {
   public:
-	enum class MemoryModel
-	{
-		RELAXED,
-		ACQUIRE,
-		RELEASE,
-		SEQ_CST
-	};
-
 	Atomic32()
 	    : value_(0) {}
 	explicit Atomic32(int32_t value)
 	    : value_(value) {}
 	~Atomic32() = default;
 
-	int32_t load(MemoryModel memModel);
-	inline int32_t load() { return load(MemoryModel::SEQ_CST); }
+	int32_t load(MemoryModel memModel) const;
+	inline int32_t load() const { return load(MemoryModel::SEQ_CST); }
 	void store(int32_t value, MemoryModel memModel);
 	inline void store(int32_t value) { store(value, MemoryModel::SEQ_CST); }
 
@@ -46,7 +61,7 @@ class DLL_PUBLIC Atomic32
 		return value_;
 	}
 
-	operator int32_t() { return load(); }
+	operator int32_t() const { return load(); }
 
 	inline int32_t operator++() { return fetchAdd(1) + 1; }
 	inline int32_t operator++(int) { return fetchAdd(1); }
@@ -86,8 +101,8 @@ class DLL_PUBLIC Atomic64
 	    : value_(value) {}
 	~Atomic64() = default;
 
-	int64_t load(MemoryModel memModel);
-	inline int64_t load() { return load(MemoryModel::SEQ_CST); }
+	int64_t load(MemoryModel memModel) const;
+	inline int64_t load() const { return load(MemoryModel::SEQ_CST); }
 	void store(int64_t value, MemoryModel memModel);
 	inline void store(int64_t value) { store(value, MemoryModel::SEQ_CST); }
 
@@ -104,7 +119,7 @@ class DLL_PUBLIC Atomic64
 		return value_;
 	}
 
-	operator int64_t() { return load(); }
+	operator int64_t() const { return load(); }
 
 	inline int64_t operator++() { return fetchAdd(1) + 1; }
 	inline int64_t operator++(int) { return fetchAdd(1); }

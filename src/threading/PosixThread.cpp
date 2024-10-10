@@ -53,7 +53,7 @@ void ThreadAffinityMask::clear(int cpuNum)
 	#endif
 }
 
-bool ThreadAffinityMask::isSet(int cpuNum)
+bool ThreadAffinityMask::isSet(int cpuNum) const
 {
 	#ifdef __APPLE__
 	return ((affinityTag_ >> cpuNum) & 1) != 0;
@@ -141,19 +141,28 @@ bool Thread::detach()
 	#ifndef __APPLE__
 void Thread::setName(const char *name)
 {
-	if (tid_ == 0)
-		return;
+	setName(static_cast<long int>(tid_), name);
+}
 
-	const auto nameLength = strnlen(name, MaxThreadNameLength);
-	if (nameLength <= MaxThreadNameLength - 1)
-		pthread_setname_np(tid_, name);
-	else
+void Thread::setName(long int tid, const char *name)
+{
+	const pthread_t nativeTid = static_cast<pthread_t>(tid);
+
+	if (nativeTid != 0)
 	{
-		char buffer[MaxThreadNameLength];
-		memcpy(buffer, name, MaxThreadNameLength - 1);
-		buffer[MaxThreadNameLength - 1] = '\0';
-		pthread_setname_np(tid_, name);
+		const auto nameLength = strnlen(name, MaxThreadNameLength);
+		if (nameLength <= MaxThreadNameLength - 1)
+			pthread_setname_np(nativeTid, name);
+		else
+		{
+			char buffer[MaxThreadNameLength];
+			memcpy(buffer, name, MaxThreadNameLength - 1);
+			buffer[MaxThreadNameLength - 1] = '\0';
+			pthread_setname_np(nativeTid, name);
+		}
 	}
+	else
+		LOGW("Cannot set the name for an invalid thread id");
 }
 	#endif
 
@@ -188,26 +197,47 @@ void Thread::setSelfName(const char *name)
 
 int Thread::priority() const
 {
-	if (tid_ == 0)
-		return 0;
+	return priority(static_cast<long int>(tid_));
+}
 
-	int policy;
-	struct sched_param param;
-	pthread_getschedparam(tid_, &policy, &param);
-	return param.sched_priority;
+int Thread::priority(long int tid)
+{
+	const pthread_t nativeTid = static_cast<pthread_t>(tid);
+	int priority = 0;
+
+	if (nativeTid != 0)
+	{
+		int policy;
+		struct sched_param param;
+		pthread_getschedparam(nativeTid, &policy, &param);
+		priority = param.sched_priority;
+	}
+	else
+		LOGW("Cannot get the priority for an invalid thread id");
+
+	return priority;
 }
 
 void Thread::setPriority(int priority)
 {
-	if (tid_ != 0)
+	setPriority(static_cast<long int>(tid_), priority);
+}
+
+// TODO: Check minimum and maximum values for POSIX: `sched_get_priority_min()` and `sched_get_priority_max()`
+// TODO: Use only valid priority values on Windows: https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setthreadpriority
+void Thread::setPriority(long int tid, int priority)
+{
+	const pthread_t nativeTid = static_cast<pthread_t>(tid);
+	if (nativeTid != 0)
 	{
 		int policy;
 		struct sched_param param;
-		pthread_getschedparam(tid_, &policy, &param);
-
+		pthread_getschedparam(nativeTid, &policy, &param);
 		param.sched_priority = priority;
-		pthread_setschedparam(tid_, policy, &param);
+		pthread_setschedparam(nativeTid, policy, &param);
 	}
+	else
+		LOGW("Cannot set the priority for an invalid thread id");
 }
 
 long int Thread::self()
@@ -245,41 +275,53 @@ bool Thread::cancel()
 	#ifndef __EMSCRIPTEN__
 ThreadAffinityMask Thread::affinityMask() const
 {
+	return affinityMask(static_cast<long int>(tid_));
+}
+
+ThreadAffinityMask Thread::affinityMask(long int tid)
+{
+	const pthread_t nativeTid = static_cast<pthread_t>(tid);
 	ThreadAffinityMask affinityMask;
 
-	if (tid_ != 0)
+	if (nativeTid != 0)
 	{
 		#ifdef __APPLE__
 		thread_affinity_policy_data_t threadAffinityPolicy;
-		const thread_port_t threadPort = pthread_mach_thread_np(tid_);
+		const thread_port_t threadPort = pthread_mach_thread_np(nativeTid);
 		mach_msg_type_number_t policyCount = THREAD_AFFINITY_POLICY_COUNT;
 		boolean_t getDefault = FALSE;
 		thread_policy_get(threadPort, THREAD_AFFINITY_POLICY, reinterpret_cast<thread_policy_t>(&threadAffinityPolicy), &policyCount, &getDefault);
 		affinityMask.affinityTag_ = threadAffinityPolicy.affinity_tag;
 		#else
-		pthread_getaffinity_np(tid_, sizeof(cpu_set_t), &affinityMask.cpuSet_);
+		pthread_getaffinity_np(nativeTid, sizeof(cpu_set_t), &affinityMask.cpuSet_);
 		#endif
 	}
 	else
-		LOGW("Cannot get the affinity for a thread that has not been created yet");
+		LOGW("Cannot get the affinity mask for an invalid thread id");
 
 	return affinityMask;
 }
 
 void Thread::setAffinityMask(ThreadAffinityMask affinityMask)
 {
-	if (tid_ != 0)
+	setAffinityMask(static_cast<long int>(tid_), affinityMask);
+}
+
+void Thread::setAffinityMask(long int tid, ThreadAffinityMask affinityMask)
+{
+	const pthread_t nativeTid = static_cast<pthread_t>(tid);
+	if (nativeTid != 0)
 	{
 		#ifdef __APPLE__
 		thread_affinity_policy_data_t threadAffinityPolicy = { affinityMask.affinityTag_ };
-		const thread_port_t threadPort = pthread_mach_thread_np(tid_);
+		const thread_port_t threadPort = pthread_mach_thread_np(nativeTid);
 		thread_policy_set(threadPort, THREAD_AFFINITY_POLICY, reinterpret_cast<thread_policy_t>(&threadAffinityPolicy), THREAD_AFFINITY_POLICY_COUNT);
 		#else
-		pthread_setaffinity_np(tid_, sizeof(cpu_set_t), &affinityMask.cpuSet_);
+		pthread_setaffinity_np(nativeTid, sizeof(cpu_set_t), &affinityMask.cpuSet_);
 		#endif
 	}
 	else
-		LOGW("Cannot set the affinity mask for a not yet created thread");
+		LOGW("Cannot set the affinity mask for an invalid thread id");
 }
 	#endif
 #endif

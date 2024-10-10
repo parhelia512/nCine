@@ -26,9 +26,10 @@ class ThreadAffinityMask
 {
   public:
 	ThreadAffinityMask() { zero(); }
+
 	ThreadAffinityMask(int cpuNum)
+	    : ThreadAffinityMask()
 	{
-		zero();
 		set(cpuNum);
 	}
 
@@ -39,7 +40,7 @@ class ThreadAffinityMask
 	/// Sets the specified CPU number to be excluded by the set
 	void clear(int cpuNum);
 	/// Returns true if the specified CPU number belongs to the set
-	bool isSet(int cpuNum);
+	bool isSet(int cpuNum) const;
 
   private:
 	#if defined(_WIN32)
@@ -96,6 +97,8 @@ class Thread
 	#ifndef __APPLE__
 	/// Sets the thread name
 	void setName(const char *name);
+	/// Sets the name of the specified thread
+	static void setName(long int tid, const char *name);
 	#endif
 
 	/// Sets the calling thread name
@@ -104,8 +107,12 @@ class Thread
 
 	/// Gets the thread priority
 	int priority() const;
+	/// Gets the priority of the specified thread
+	static int priority(long int tid);
 	/// Sets the thread priority
 	void setPriority(int priority);
+	/// Sets the priority of the specified thread
+	static void setPriority(long int tid, int priority);
 
 	/// Returns the calling thread id
 	static long int self();
@@ -121,8 +128,12 @@ class Thread
 	#ifndef __EMSCRIPTEN__
 	/// Gets the thread affinity mask
 	ThreadAffinityMask affinityMask() const;
+	/// Gets the affinity mask of the specified thread
+	static ThreadAffinityMask affinityMask(long int tid);
 	/// Sets the thread affinity mask
 	void setAffinityMask(ThreadAffinityMask affinityMask);
+	/// Sets the affinity mask of the specified thread
+	static void setAffinityMask(long int tid, ThreadAffinityMask affinityMask);
 	#endif
 #endif
 

@@ -6,23 +6,37 @@
 namespace nctl {
 
 ///////////////////////////////////////////////////////////
+// Atomic
+///////////////////////////////////////////////////////////
+
+void Atomic::threadFence(MemoryModel memModel)
+{
+	MemoryBarrier();
+}
+
+void Atomic::signalFence(MemoryModel memModel)
+{
+	_ReadWriteBarrier();
+}
+
+///////////////////////////////////////////////////////////
 // Atomic32
 ///////////////////////////////////////////////////////////
 
-int32_t Atomic32::load(MemoryModel memModel)
+int32_t Atomic32::load(MemoryModel memModel) const
 {
 	switch (memModel)
 	{
 		case MemoryModel::RELAXED:
-			return ReadNoFence(reinterpret_cast<volatile long *>(&value_));
+			return ReadNoFence(reinterpret_cast<const volatile long *>(&value_));
 		case MemoryModel::ACQUIRE:
-			return ReadAcquire(reinterpret_cast<volatile long *>(&value_));
+			return ReadAcquire(reinterpret_cast<const volatile long *>(&value_));
 		case MemoryModel::RELEASE:
 			FATAL_MSG("Incompatible memory model");
 			return 0;
 		case MemoryModel::SEQ_CST:
 		default:
-			return ReadAcquire(reinterpret_cast<volatile long *>(&value_));
+			return ReadAcquire(reinterpret_cast<const volatile long *>(&value_));
 	}
 }
 
@@ -98,20 +112,20 @@ bool Atomic32::cmpExchange(int32_t newValue, int32_t cmpValue, MemoryModel memMo
 // Atomic64
 ///////////////////////////////////////////////////////////
 
-int64_t Atomic64::load(MemoryModel memModel)
+int64_t Atomic64::load(MemoryModel memModel) const
 {
 	switch (memModel)
 	{
 		case MemoryModel::RELAXED:
-			return ReadNoFence64(reinterpret_cast<volatile LONG64 *>(&value_));
+			return ReadNoFence64(reinterpret_cast<const volatile LONG64 *>(&value_));
 		case MemoryModel::ACQUIRE:
-			return ReadAcquire64(reinterpret_cast<volatile LONG64 *>(&value_));
+			return ReadAcquire64(reinterpret_cast<const volatile LONG64 *>(&value_));
 		case MemoryModel::RELEASE:
 			FATAL_MSG("Incompatible memory model");
 			return 0;
 		case MemoryModel::SEQ_CST:
 		default:
-			return ReadAcquire64(reinterpret_cast<volatile LONG64 *>(&value_));
+			return ReadAcquire64(reinterpret_cast<const volatile LONG64 *>(&value_));
 	}
 }
 
