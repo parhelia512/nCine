@@ -133,6 +133,11 @@ bool DrawableNode::draw(RenderQueue &renderQueue)
 	}
 	else
 	{
+		// Reset the transformation and color dirty bits for culled nodes.
+		// They didn't run `updateRenderCommand()` and would otherwise transform every frame.
+		dirtyBits_.reset(DirtyBitPositions::TransformationBit);
+		dirtyBits_.reset(DirtyBitPositions::ColorBit);
+
 		RenderStatistics::addCulledNode();
 		return false;
 	}
